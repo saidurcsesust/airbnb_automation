@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Run #{{ run.pk }} – Airbnb Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="fw-bold">TestRun #{{ run.pk }}
+    <span class="badge badge-{{ run.status }} ms-2" style="font-size:.7em">{{ run.status|upper }}</span>
+    {% if run.is_mobile %}<span class="badge bg-info ms-1" style="font-size:.7em">📱 Mobile</span>{% endif %}
+  </h2>
+  <a href="/" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3"><div class="card text-center p-3 shadow-sm"><div class="fs-5">🌍</div><div class="small text-muted">Country</div><strong>{{ run.selected_country|default:"–" }}</strong></div></div>
+  <div class="col-md-3"><div class="card text-center p-3 shadow-sm"><div class="fs-5">📅</div><div class="small text-muted">Dates</div><strong>{{ run.checkin_date|default:"–" }} → {{ run.checkout_date|default:"–" }}</strong></div></div>
+  <div class="col-md-3"><div class="card text-center p-3 shadow-sm"><div class="fs-5">👥</div><div class="small text-muted">Guests</div><strong>{{ run.guest_count|default:"–" }}</strong></div></div>
+  <div class="col-md-3"><div class="card text-center p-3 shadow-sm"><div class="fs-5">⏱</div><div class="small text-muted">Duration</div><strong>{% if run.finished_at %}{{ run.started_at|timesince:run.finished_at }}{% else %}Running…{% endif %}</strong></div></div>
+</div>
+
+<!-- Test Cases -->
+<h4 class="mt-4 mb-3">🧪 Test Steps</h4>
+{% for step in run.test_cases.all %}
+<div class="card mb-3 shadow-sm step-card {{ step.status }}">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <span class="badge {% if step.status == 'passed' %}bg-success{% else %}bg-danger{% endif %} me-2">{{ step.status|upper }}</span>
+        <strong>Step {{ step.step_number }}: {{ step.step_name }}</strong>
+      </div>
+      <small class="text-muted">{{ step.duration_ms|default:"?" }}ms</small>
+    </div>
+    {% if step.message %}
+    <pre class="mt-2 mb-1">{{ step.message }}</pre>
+    {% endif %}
+    {% if step.screenshot_path %}
+    <div class="mt-2">
+      <small class="text-muted">📸 {{ step.screenshot_path }}</small>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<p class="text-muted">No steps recorded.</p>
+{% endfor %}
+
+<!-- Suggestions -->
+{% if run.suggestions.all %}
+<h4 class="mt-4 mb-3">💡 Auto-suggestions ({{ run.suggestions.count }})</h4>
+<ul class="list-group mb-4">
+  {% for s in run.suggestions.all %}
+  <li class="list-group-item {% if s.is_selected %}list-group-item-success{% endif %}">
+    [{{ s.position }}] {{ s.text }}
+    {% if s.has_map_icon %}<span class="badge bg-secondary ms-2">📍 icon</span>{% endif %}
+    {% if s.is_selected %}<span class="badge bg-success ms-2">✓ selected</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Listings -->
+{% if run.listings.all %}
+<h4 class="mt-4 mb-3">🏘 Search Listings ({{ run.listings.count }})</h4>
+<div class="table-responsive mb-4">
+  <table class="table table-sm bg-white shadow-sm">
+    <thead class="table-light"><tr><th>#</th><th>Title</th><th>Price</th><th>Selected</th></tr></thead>
+    <tbody>
+      {% for l in run.listings.all %}
+      <tr {% if l.is_selected %}class="table-success"{% endif %}>
+        <td>{{ l.position }}</td>
+        <td>{{ l.title|truncatechars:80 }}</td>
+        <td>{{ l.price|default:"–" }}</td>
+        <td>{% if l.is_selected %}✓{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Listing Detail -->
+{% if run.listing_detail %}
+<h4 class="mt-4 mb-3">🏠 Listing Detail</h4>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h5>{{ run.listing_detail.title|default:"–" }}</h5>
+    <p class="text-muted">{{ run.listing_detail.subtitle|default:"–" }}</p>
+    <p><a href="{{ run.listing_detail.page_url }}" target="_blank" class="btn btn-sm btn-outline-primary">Open listing ↗</a></p>
+    <strong>Gallery images: {{ run.listing_detail.image_urls|length }}</strong>
+  </div>
+</div>
+{% endif %}
+
+<!-- Console Logs -->
+{% if run.console_logs.all %}
+<h4 class="mt-4 mb-3">🖥 Console Logs ({{ run.console_logs.count }})</h4>
+<div class="accordion mb-4" id="consoleLogs">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#consoleBody">
+        Show {{ run.console_logs.count }} console entries
+      </button>
+    </h2>
+    <div id="consoleBody" class="accordion-collapse collapse">
+      <div class="accordion-body p-0">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Type</th><th>Message</th><th>Step</th></tr></thead>
+          <tbody>
+            {% for log in run.console_logs.all %}
+            <tr class="{% if log.log_type == 'error' %}table-danger{% elif log.log_type == 'warning' %}table-warning{% endif %}">
+              <td><code>{{ log.log_type }}</code></td>
+              <td><small>{{ log.message|truncatechars:200 }}</small></td>
+              <td><small>{{ log.step_name }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Network Logs -->
+{% if run.network_logs.all %}
+<h4 class="mt-4 mb-3">🌐 Network Logs ({{ run.network_logs.count }})</h4>
+<div class="accordion mb-4" id="networkLogs">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#networkBody">
+        Show {{ run.network_logs.count }} network requests
+      </button>
+    </h2>
+    <div id="networkBody" class="accordion-collapse collapse">
+      <div class="accordion-body p-0" style="max-height:400px;overflow:auto;">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Status</th><th>Method</th><th>Type</th><th>URL</th></tr></thead>
+          <tbody>
+            {% for log in run.network_logs.all %}
+            <tr class="{% if log.status_code >= 400 %}table-danger{% elif log.status_code >= 300 %}table-warning{% endif %}">
+              <td>{{ log.status_code|default:"–" }}</td>
+              <td>{{ log.method }}</td>
+              <td><small>{{ log.resource_type }}</small></td>
+              <td><small style="word-break:break-all">{{ log.url|truncatechars:120 }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

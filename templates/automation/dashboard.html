@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Airbnb Automation{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold">Test Runs Dashboard</h2>
+  <div>
+    <span class="badge bg-secondary fs-6 me-1">Total: {{ total }}</span>
+    <span class="badge bg-success fs-6 me-1">Passed: {{ passed }}</span>
+    <span class="badge bg-danger fs-6">Failed: {{ failed }}</span>
+  </div>
+</div>
+
+{% if runs %}
+<div class="table-responsive">
+  <table class="table table-hover bg-white shadow-sm rounded">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Status</th>
+        <th>Country</th>
+        <th>Suggestion</th>
+        <th>Check-in</th>
+        <th>Check-out</th>
+        <th>Guests</th>
+        <th>Mode</th>
+        <th>Steps</th>
+        <th>Started</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td><strong>{{ run.pk }}</strong></td>
+        <td>
+          <span class="badge badge-{{ run.status }}">{{ run.status|upper }}</span>
+        </td>
+        <td>{{ run.selected_country|default:"–" }}</td>
+        <td><small>{{ run.selected_suggestion|truncatechars:30|default:"–" }}</small></td>
+        <td><small>{{ run.checkin_date|default:"–" }}</small></td>
+        <td><small>{{ run.checkout_date|default:"–" }}</small></td>
+        <td>{{ run.guest_count|default:"–" }}</td>
+        <td>{% if run.is_mobile %}📱 Mobile{% else %}🖥 Desktop{% endif %}</td>
+        <td>
+          {% with total_steps=run.test_cases.count passed_steps=run.test_cases.filter_passed %}
+          {{ run.test_cases.count }} steps
+          {% endwith %}
+        </td>
+        <td><small>{{ run.started_at|date:"M d, H:i" }}</small></td>
+        <td>
+          <a href="/run/{{ run.pk }}/" class="btn btn-sm btn-outline-primary">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+  No test runs yet. Run: <code>python manage.py run_airbnb_journey</code>
+</div>
+{% endif %}
+{% endblock %}
