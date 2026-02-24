@@ -1,170 +1,87 @@
 from django.db import models
 
 
-class TestRun(models.Model):
-    """Represents a single end-to-end automation run."""
-
-    STATUS_CHOICES = [
-        ("running", "Running"),
-        ("passed", "Passed"),
-        ("failed", "Failed"),
-    ]
-
-    started_at = models.DateTimeField(auto_now_add=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="running")
-    selected_country = models.CharField(max_length=100, blank=True)
-    selected_suggestion = models.CharField(max_length=255, blank=True)
-    checkin_date = models.CharField(max_length=50, blank=True)
-    checkout_date = models.CharField(max_length=50, blank=True)
-    selected_month = models.CharField(max_length=50, blank=True)
-    guest_count = models.IntegerField(null=True, blank=True)
-    is_mobile = models.BooleanField(default=False)
-    notes = models.TextField(blank=True)
+class TestResult(models.Model):
+    test_case = models.CharField(max_length=255)
+    url = models.URLField(max_length=2048)
+    passed = models.BooleanField(default=False)
+    comment = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["-started_at"]
+        db_table = "testing"
+        verbose_name = "Test Result"
+        verbose_name_plural = "Test Results"
 
     def __str__(self):
-        return f"TestRun #{self.pk} - {self.status} ({self.started_at:%Y-%m-%d %H:%M})"
+        return f"{self.test_case} ({'PASS' if self.passed else 'FAIL'})"
 
 
-class TestCase(models.Model):
-    """Represents an individual step/test-case within a TestRun."""
-
-    STATUS_CHOICES = [
-        ("passed", "Passed"),
-        ("failed", "Failed"),
-        ("skipped", "Skipped"),
-    ]
-
-    test_run = models.ForeignKey(TestRun, on_delete=models.CASCADE, related_name="test_cases")
-    step_number = models.IntegerField()
-    step_name = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-    message = models.TextField(blank=True)
-    screenshot_path = models.CharField(max_length=500, blank=True)
-    executed_at = models.DateTimeField(auto_now_add=True)
-    duration_ms = models.IntegerField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["step_number"]
-
-    def __str__(self):
-        return f"Step {self.step_number}: {self.step_name} [{self.status}]"
-
-
-class AutoSuggestion(models.Model):
-    """Stores auto-suggestion items captured during search."""
-
-    test_run = models.ForeignKey(TestRun, on_delete=models.CASCADE, related_name="suggestions")
-    text = models.CharField(max_length=500)
-    has_map_icon = models.BooleanField(default=False)
-    position = models.IntegerField()
-    is_selected = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ["position"]
-
-    def __str__(self):
-        return f"Suggestion [{self.position}]: {self.text}"
-
-
-class SelectedDates(models.Model):
-    """Stores the dates selected in the date picker."""
-
-    test_run = models.OneToOneField(TestRun, on_delete=models.CASCADE, related_name="selected_dates")
-    month_name = models.CharField(max_length=50)
-    checkin_date = models.CharField(max_length=50)
-    checkout_date = models.CharField(max_length=50)
-    next_month_clicks = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f"{self.checkin_date} → {self.checkout_date} ({self.month_name})"
-
-
-class GuestSelection(models.Model):
-    """Stores guest picker selections."""
-
-    test_run = models.OneToOneField(TestRun, on_delete=models.CASCADE, related_name="guest_selection")
-    adults = models.IntegerField(default=0)
-    children = models.IntegerField(default=0)
-    infants = models.IntegerField(default=0)
-    pets = models.IntegerField(default=0)
-    total_guests = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f"Guests: {self.total_guests} (A:{self.adults} C:{self.children} I:{self.infants} P:{self.pets})"
-
-
-class SearchListing(models.Model):
-    """Stores listing data scraped from the search results page."""
-
-    test_run = models.ForeignKey(TestRun, on_delete=models.CASCADE, related_name="listings")
-    title = models.TextField(blank=True)
+class ListingData(models.Model):
+    title = models.CharField(max_length=512)
     price = models.CharField(max_length=100, blank=True)
-    image_url = models.URLField(max_length=1000, blank=True)
-    listing_url = models.URLField(max_length=1000, blank=True)
-    position = models.IntegerField()
-    is_selected = models.BooleanField(default=False)
+    image_url = models.URLField(max_length=2048, blank=True)
+    listing_url = models.URLField(max_length=2048, blank=True)
+    scraped_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["position"]
+        db_table = "listing_data"
+        verbose_name = "Listing"
+        verbose_name_plural = "Listings"
 
     def __str__(self):
-        return f"Listing [{self.position}]: {self.title[:60]}"
+        return self.title[:80]
 
 
-class ListingDetail(models.Model):
-    """Stores details captured from an individual listing page."""
+class SuggestionData(models.Model):
+    text = models.CharField(max_length=512)
+    search_query = models.CharField(max_length=255)
+    captured_at = models.DateTimeField(auto_now_add=True)
 
-    test_run = models.OneToOneField(TestRun, on_delete=models.CASCADE, related_name="listing_detail")
-    title = models.TextField(blank=True)
-    subtitle = models.TextField(blank=True)
-    image_urls = models.JSONField(default=list)
-    page_url = models.URLField(max_length=1000, blank=True)
+    class Meta:
+        db_table = "suggestion_data"
+        verbose_name = "Suggestion"
+        verbose_name_plural = "Suggestions"
 
     def __str__(self):
-        return f"Detail: {self.title[:80]}"
+        return self.text[:80]
 
 
 class NetworkLog(models.Model):
-    """Stores captured network requests/responses."""
+    METHOD_CHOICES = [
+        ("GET", "GET"),
+        ("POST", "POST"),
+        ("PUT", "PUT"),
+        ("DELETE", "DELETE"),
+        ("PATCH", "PATCH"),
+        ("OPTIONS", "OPTIONS"),
+    ]
 
-    test_run = models.ForeignKey(TestRun, on_delete=models.CASCADE, related_name="network_logs")
-    url = models.URLField(max_length=2000)
-    method = models.CharField(max_length=10, blank=True)
+    url = models.URLField(max_length=2048)
+    method = models.CharField(max_length=10, choices=METHOD_CHOICES, default="GET")
     status_code = models.IntegerField(null=True, blank=True)
     resource_type = models.CharField(max_length=50, blank=True)
-    step_name = models.CharField(max_length=255, blank=True)
-    logged_at = models.DateTimeField(auto_now_add=True)
+    captured_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["logged_at"]
-
-    def __str__(self):
-        return f"[{self.status_code}] {self.method} {self.url[:80]}"
+        db_table = "network_logs"
+        verbose_name = "Network Log"
+        verbose_name_plural = "Network Logs"
 
 
 class ConsoleLog(models.Model):
-    """Stores browser console messages."""
-
-    LOG_TYPES = [
-        ("log", "Log"),
-        ("info", "Info"),
-        ("warning", "Warning"),
-        ("error", "Error"),
-        ("debug", "Debug"),
+    LEVEL_CHOICES = [
+        ("INFO", "Info"),
+        ("WARNING", "Warning"),
+        ("ERROR", "Error"),
+        ("DEBUG", "Debug"),
     ]
 
-    test_run = models.ForeignKey(TestRun, on_delete=models.CASCADE, related_name="console_logs")
-    log_type = models.CharField(max_length=20, choices=LOG_TYPES, default="log")
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default="INFO")
     message = models.TextField()
-    step_name = models.CharField(max_length=255, blank=True)
-    logged_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=512, blank=True)
+    captured_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["logged_at"]
-
-    def __str__(self):
-        return f"[{self.log_type.upper()}] {self.message[:100]}"
+        db_table = "console_logs"
+        verbose_name = "Console Log"
+        verbose_name_plural = "Console Logs"
