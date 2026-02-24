@@ -91,14 +91,26 @@ class Command(BaseCommand):
         parser.add_argument(
             '--no-screenshots',
             action='store_true',
-            default=False,
-            help='Disable saving screenshots during the automation run.',
+            default=True,
+            help='Disable saving screenshots during the automation run (default).',
+        )
+        parser.add_argument(
+            '--screenshots',
+            dest='no_screenshots',
+            action='store_false',
+            help='Enable saving screenshots during the automation run.',
         )
         parser.add_argument(
             '--store-db',
             action='store_true',
-            default=False,
-            help='Enable database storage (disabled by default).',
+            default=True,
+            help='Enable database storage (default).',
+        )
+        parser.add_argument(
+            '--no-store-db',
+            dest='store_db',
+            action='store_false',
+            help='Disable database storage.',
         )
         parser.add_argument(
             '--keep-browser-open',
@@ -138,7 +150,7 @@ class Command(BaseCommand):
                 found="Session started successfully"
             )
         else:
-            self.stdout.write(self.style.WARNING("  DB storage: disabled (--store-db to enable)"))
+            self.stdout.write(self.style.WARNING("  DB storage: disabled (--no-store-db was provided)"))
 
         screenshots_enabled = not options.get('no_screenshots', False)
         keep_browser_open = options.get('keep_browser_open', False)
@@ -181,7 +193,7 @@ class Command(BaseCommand):
         step01 = Step01LandingAndSearch(browser, db, airbnb_url)
         selected_country = step01.run()
         self.stdout.write(self.style.SUCCESS(f"  ✓ Country selected: {selected_country}"))
-        time.sleep(2)  # Delay after Step 01
+        time.sleep(0.6)  # Reduced delay after Step 01
 
         # Capture console & network logs after page load
         self._save_monitoring_logs(browser, db)
@@ -205,7 +217,7 @@ class Command(BaseCommand):
             self.style.SUCCESS("  ✓ Suggestion selected") if suggestion_ok
             else self.style.WARNING("  ⚠ Suggestion step had issues, continuing...")
         )
-        time.sleep(2)  # Delay after Step 02
+        time.sleep(0.6)  # Reduced delay after Step 02
 
         if step == 2:
             db.save_test_result(

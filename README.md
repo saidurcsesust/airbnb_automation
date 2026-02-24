@@ -72,8 +72,6 @@ Main command:
 python manage.py run_airbnb_automation
 ```
 
-Important default:
-- DB writes are disabled unless you pass `--store-db`.
 
 ### Useful command examples
 
@@ -81,26 +79,16 @@ Important default:
 # Full flow (desktop, visible browser)
 python manage.py run_airbnb_automation
 
-# Full flow + persist to DB
-python manage.py run_airbnb_automation --store-db
+# Run only one step (1-6)
+python manage.py run_airbnb_automation --step 3
 
-# Headless run
-python manage.py run_airbnb_automation --headless
+# Keep browser open at end
+python manage.py run_airbnb_automation --keep-browser-open
 
 # Mobile emulation
 python manage.py run_airbnb_automation --mobile
 
-# Run only one step (1-6)
-python manage.py run_airbnb_automation --step 3
 
-# Deterministic one-direction flow
-python manage.py run_airbnb_automation --deterministic
-
-# Disable screenshots
-python manage.py run_airbnb_automation --no-screenshots
-
-# Keep browser open at end
-python manage.py run_airbnb_automation --keep-browser-open
 ```
 
 ## Django admin
@@ -124,5 +112,5 @@ Available admin models:
 ## Notes
 
 - Airbnb UI/locators can change; selectors are implemented with fallbacks but may need updates over time.
-- If you do not use `--store-db`, automation still runs and takes screenshots, but DB counters in summary are `N/A`.
+- If you use `--no-store-db`, automation still runs, but DB counters in summary are `N/A`.
 - `airbnb_recorded.py` is a minimal standalone Playwright script and is separate from the Django command flow.

@@ -38,6 +38,7 @@ class Step03DatePicker:
         if not picker_open:
             return {'checkin': None, 'checkout': None}
 
+        self._slide_months_forward(months=4)
         checkin_ok, checkout_ok = self._select_random_two_dates()
 
         self.browser.take_screenshot("step03_dates_selected")
@@ -278,7 +279,7 @@ class Step03DatePicker:
             pass
         return False, False
 
-    def _click_next_month_once(self) -> None:
+    def _click_next_month_once(self) -> bool:
         page = self.browser.page
         next_selectors = [
             "button[aria-label='Move forward to switch to the next month.']",
@@ -291,25 +292,26 @@ class Step03DatePicker:
                 if btn.is_visible(timeout=800) and btn.is_enabled():
                     btn.click(timeout=1200)
                     time.sleep(0.1)
-                    return
+                    return True
             except Exception:
                 continue
+        return False
+
+    def _slide_months_forward(self, months: int = 4) -> int:
+        slid = 0
+        for _ in range(max(0, months)):
+            try:
+                if self._click_next_month_once():
+                    slid += 1
+                else:
+                    break
+            except Exception:
+                break
+            time.sleep(0.1)
+        return slid
 
     def _select_by_role_date_buttons(self) -> bool:
         page = self.browser.page
-
-        # Provided locator: "Move forward to switch to the..."
-        for _ in range(4):
-            try:
-                next_btn = page.get_by_role(
-                    "button",
-                    name=re.compile(r"Move forward to switch to the", re.IGNORECASE),
-                ).first
-                if next_btn.is_visible(timeout=1200):
-                    next_btn.click(timeout=1500)
-                    time.sleep(0.1)
-            except Exception:
-                break
 
         # Prefer exact labels from shared script, then generic visible date buttons.
         exact_labels = [

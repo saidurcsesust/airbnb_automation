@@ -4,6 +4,7 @@ Step 06: Item Details Page Verification
 import random
 import time
 import logging
+import re
 
 from automation.services.browser_service import BrowserService
 from automation.services.database_service import DatabaseService
@@ -77,7 +78,7 @@ class Step06ListingDetails:
         return result
 
     def _open_listing(self, listing: dict) -> bool:
-        listing_url = listing.get('listing_url', '')
+        listing_url = self._normalize_listing_url(listing.get('listing_url', ''))
 
         if listing_url and 'airbnb.com/rooms/' in listing_url:
             self.browser.page.goto(listing_url, wait_until='domcontentloaded', timeout=10000)
@@ -115,6 +116,36 @@ class Step06ListingDetails:
             pass
 
         return False
+
+    def _normalize_listing_url(self, raw_url: str) -> str:
+        """Normalize scraped listing URLs into a navigable absolute URL."""
+        url = (raw_url or "").strip()
+        if not url:
+            return ""
+
+        if url.startswith("/rooms/"):
+            return f"https://www.airbnb.com{url}"
+
+        if url.startswith("//"):
+            return f"https:{url}"
+
+        if url.startswith("www.airbnb.com/"):
+            return f"https://{url}"
+
+        # Handle cases like "airbnb.com/rooms/..."
+        if re.match(r"^airbnb\.com/", url, flags=re.IGNORECASE):
+            return f"https://www.{url}"
+
+        if url.startswith("http://") or url.startswith("https://"):
+            return url
+
+        # Fallback: if it's a path-like rooms URL without leading slash
+        if "rooms/" in url and "airbnb.com" not in url:
+            if not url.startswith("/"):
+                url = f"/{url}"
+            return f"https://www.airbnb.com{url}"
+
+        return url
 
     def _get_title(self) -> str:
         selectors = [
